@@ -1,0 +1,16 @@
+[Unit]
+Description=Gui Gui Room Audio Agent
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=haunt
+WorkingDirectory=/home/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt/haunt-audio-app/haunt.env
+ExecStart=/home/haunt/haunt-audio-app/.venv/bin/python room_agent.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

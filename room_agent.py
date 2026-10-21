@@ -10,6 +10,21 @@ LOCK = threading.Lock()
 PLAYER = None
 PAUSED = False
 CURRENT = None
+VOLUME = 70
+
+def launch_player(path):
+    p = subprocess.Popen(['cvlc','--intf','rc','--rc-fake-tty','--no-video','--loop',path], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+    set_player_volume(p)
+    return p
+
+def set_player_volume(p):
+    if p and p.poll() is None and p.stdin:
+        try:
+            p.stdin.write(f'volume {round(VOLUME*256/100)}\n')
+            p.stdin.flush()
+        except (BrokenPipeError, OSError):
+            pass
+
 
 @app.before_request
 def auth():
@@ -27,7 +42,7 @@ def stop_player():
 
 def status():
     running = PLAYER is not None and PLAYER.poll() is None
-    return {'file': CURRENT, 'state': 'paused' if running and PAUSED else 'playing' if running else 'stopped'}
+    return {'file': CURRENT, 'state': 'paused' if running and PAUSED else 'playing' if running else 'stopped', 'volume': VOLUME}
 
 @app.get('/status')
 def get_status():
@@ -56,7 +71,7 @@ def upload():
         tmp.replace(path)
         CURRENT = str(path)
         global PLAYER, PAUSED
-        PLAYER = subprocess.Popen(['cvlc','--intf','dummy','--no-video','--loop',CURRENT], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        PLAYER = launch_player(CURRENT)
         PAUSED = False
         return jsonify(status())
 
@@ -72,8 +87,7 @@ def play():
             PLAYER.send_signal(__import__('signal').SIGCONT)
             PAUSED = False
         elif not PLAYER or PLAYER.poll() is not None:
-            PLAYER = subprocess.Popen(['cvlc','--intf','dummy','--no-video','--loop',CURRENT],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            PLAYER = launch_player(CURRENT)
             PAUSED = False
         return jsonify(status())
 
@@ -84,6 +98,18 @@ def pause():
         if PLAYER and PLAYER.poll() is None and not PAUSED:
             PLAYER.send_signal(__import__('signal').SIGSTOP)
             PAUSED = True
+        return jsonify(status())
+
+@app.post('/volume')
+def volume():
+    global VOLUME
+    data = request.get_json(silent=True) or {}
+    value = data.get('volume')
+    if type(value) not in (int, float) or not 0 <= value <= 100:
+        return jsonify(error='Volume must be 0 to 100'), 400
+    with LOCK:
+        VOLUME = int(value)
+        set_player_volume(PLAYER)
         return jsonify(status())
 
 @app.post('/stop')

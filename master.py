@@ -11,7 +11,7 @@ ROOMS = {
     'lift': 'haunt-lift.local',
     'gate': 'haunt-gate.local',
 }
-HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><div id="rooms"></div><script>
+HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><div id="rooms"></div><section class="room"><h2>🎙 Gui Gui Voice Lab</h2><p class="state" id="mic-status">Checking microphone...</p><div id="mic-controls"></div><button onclick="micSave()">Apply settings</button><button onclick="micToggle(true)">Enable</button><button onclick="micToggle(false)">Disable</button><p><small id="mic-msg"></small></p></section><script>
 const names = {{names|tojson}};
 const root=document.getElementById('rooms');
 for(const name of names){const div=document.createElement('div');div.className='room';div.innerHTML=`<h2>${name}</h2><p class="state" id="s-${name}">Checking...</p><input id="f-${name}" type="file" accept="audio/*"><button onclick="upload('${name}')">Upload</button><p><button onclick="cmd('${name}','play')">▶ Play / Resume</button><button onclick="cmd('${name}','pause')">⏸ Pause</button><button onclick="cmd('${name}','stop')">■ Stop</button></p><label>Volume <span id="v-${name}">70</span>% <input type="range" min="0" max="100" value="70" id="vol-${name}" oninput="document.getElementById('v-${name}').textContent=this.value" onchange="setVolume('${name}',this.value)"></label><br><small id="m-${name}"></small>`;root.appendChild(div)}
@@ -20,6 +20,15 @@ async function setVolume(name,value){const r=await fetch(`/api/${name}/volume`,{
 async function cmd(name,action){const r=await fetch(`/api/${name}/${action}`,{method:'POST'});const d=await r.json();document.getElementById(`m-${name}`).textContent=d.error||'';refresh(name)}
 async function upload(name){const file=document.getElementById(`f-${name}`).files[0];if(!file)return alert('Choose a file');const fd=new FormData();fd.append('file',file);const r=await fetch(`/api/${name}/upload`,{method:'POST',body:fd});const d=await r.json();document.getElementById(`m-${name}`).textContent=r.ok?'Uploaded and playing on loop':d.error;refresh(name)}
 for(const name of names)refresh(name);setInterval(()=>{for(const name of names)refresh(name)},5000);
+
+const micDefs=[['threshold','Trigger threshold',200,3000,50,''],['duration','Record seconds',1,5,0.5,' s'],['pitch','Pitch multiplier',1,1.8,0.05,'×'],['gain','Amplification',0.5,4,0.25,'×'],['cooldown','Cooldown',3,30,1,' s']];
+const mc=document.getElementById('mic-controls');
+for(const [k,label,min,max,step,suffix] of micDefs){const el=document.createElement('p');el.innerHTML=`<label>${label}: <b id="mic-v-${k}">-</b>${suffix} <input id="mic-${k}" type="range" min="${min}" max="${max}" step="${step}" oninput="document.getElementById('mic-v-${k}').textContent=this.value"></label>`;mc.appendChild(el)}
+async function micRequest(method,body){const r=await fetch('/api/mic/settings',{method,headers:{'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();if(!r.ok)throw Error(d.error||r.status);return d}
+async function micRefresh(update=true){try{const d=await micRequest('GET');document.getElementById('mic-status').textContent=`${d.enabled?'Enabled':'Disabled'} · ${d.activity||'Idle'} · Last RMS: ${Math.round(d.last_rms||0)} · Triggers: ${d.triggers||0}`;if(update)for(const [k] of micDefs){const e=document.getElementById('mic-'+k);if(document.activeElement!==e){e.value=d[k];document.getElementById('mic-v-'+k).textContent=d[k]}}}catch(e){document.getElementById('mic-status').textContent='Microphone offline: '+e.message}}
+async function micSave(){try{const b={};for(const [k] of micDefs)b[k]=Number(document.getElementById('mic-'+k).value);await micRequest('POST',b);document.getElementById('mic-msg').textContent='Settings saved';micRefresh()}catch(e){document.getElementById('mic-msg').textContent=e.message}}
+async function micToggle(on){try{await micRequest('POST',{enabled:on});micRefresh()}catch(e){document.getElementById('mic-msg').textContent=e.message}}
+micRefresh();setInterval(()=>micRefresh(false),3000);
 </script></body></html>'''
 
 @app.get('/')
@@ -43,5 +52,16 @@ def proxy(room,action):
         return (response.content,response.status_code,{'Content-Type':'application/json'})
     except requests.RequestException as e:
         return jsonify(error=f'Room unavailable: {e.__class__.__name__}'),503
+
+
+@app.route('/api/mic/settings',methods=['GET','POST'])
+def mic_settings():
+    token=os.environ.get('VOICE_TOKEN','')
+    if not token: return jsonify(error='Set VOICE_TOKEN in master haunt.env'),503
+    try:
+        r=requests.request(request.method,'http://haunt-mic.local:5013/settings',headers={'X-Voice-Token':token},json=(request.get_json(silent=True) or {}) if request.method=='POST' else None,timeout=4)
+        return (r.content,r.status_code,{'Content-Type':'application/json'})
+    except requests.RequestException as exc:
+        return jsonify(error='Microphone unreachable: '+type(exc).__name__),503
 
 if __name__ == '__main__': app.run(host='0.0.0.0',port=5000)

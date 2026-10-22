@@ -1,0 +1,16 @@
+[Unit]
+Description=Gui Gui voice playback receiver
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=haunt-corridor
+WorkingDirectory=/home/haunt-corridor/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt-corridor/haunt/haunt-audio-app/voice.env
+ExecStart=/home/haunt-corridor/haunt/haunt-audio-app/.venv/bin/python /home/haunt-corridor/haunt/haunt-audio-app/voice_receiver.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

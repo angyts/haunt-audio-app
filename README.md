@@ -52,3 +52,33 @@ On corridor: use existing venv with Flask installed. Copy receiver service, set 
 On mic: use an environment with working audioop and create voice.env with same token. Install ALSA and ffmpeg. Start sender.
 
 These services bind receiver to port 5012 on the local network. Keep on trusted isolated LAN; do not port-forward. Audio clips are temporary and deleted after playback.
+
+# Gui Gui Relay v4
+
+Add `master.py`, `relay_agent.py`, `install-relay.sh` to the existing GitHub project. Do not replace room_agent.py, voice_sender.py or voice_receiver.py. The master.py is based on Voice Lab v2.
+
+**Electrical prerequisite:** Earlier IN1 measured 4.4V. Do not connect Pi GPIO directly to an unverified 5V-biased relay input. Use a verified 3.3V-safe transistor/open-collector driver or level interface. Power off all supplies before changing wiring. Test without lighting loads first. Keep exit/emergency lighting independent. Relays are active LOW, GPIO17 and GPIO27, and start OFF. These are software commands, not a safety interlock.
+
+For each of the five speaker Pis (`haunt-master`, `haunt-forest`, `haunt-corridor`, `haunt-lift`, `haunt-gate`):
+
+```sh
+cd ~/haunt/haunt-audio-app
+git pull
+sh install-relay.sh
+```
+
+The script uses each Pi's actual username and directory. `haunt.env` must contain the existing shared `HAUNT_TOKEN`. The relay agent listens on port 5052 on the local network. Keep the Wi-Fi private and do not forward ports 5000, 5051, 5052 or the voice services to the internet.
+
+On `haunt-master` restart the dashboard after pulling:
+
+```sh
+sudo systemctl restart haunt-master
+```
+
+Check locally:
+
+```sh
+systemctl status haunt-relay --no-pager
+```
+
+Dashboard at http://haunt-master.local:5000 groups sound and two relay buttons per room. `haunt-mic` has no relays. The GPIO backend may need adjustment for your Raspberry Pi OS version; if pip cannot install `lgpio`, send the exact error instead of forcing the installation. Restarting a relay service resets both channels OFF by design.

@@ -82,3 +82,20 @@ systemctl status haunt-relay --no-pager
 ```
 
 Dashboard at http://haunt-master.local:5000 groups sound and two relay buttons per room. `haunt-mic` has no relays. The GPIO backend may need adjustment for your Raspberry Pi OS version; if pip cannot install `lgpio`, send the exact error instead of forcing the installation. Restarting a relay service resets both channels OFF by design.
+
+# Gui Gui Servo v5
+
+This is an add-on to the working v4 dashboard. Replace **master.py only on haunt-master**, and add **servo_agent.py** and **install-servo.sh** to the GitHub repo. Do not replace room_agent.py, relay_agent.py, voice_sender.py or any existing .env files.
+
+GPIO (BCM): Servo1=18, Servo2=19, Servo3=12, Servo4=13. Relay GPIO17/27 unchanged. Servos use separately protected external 5V power and shared signal ground, never Pi GPIO for motor power. Disconnect all power when wiring. Do not use for doors, emergency lighting, or safety mechanisms. Keep network private and do not expose ports publicly.
+
+The servo agent uses the existing HAUNT_TOKEN in haunt.env, port 5053, and gpiozero already available in the Pi's venv. No pip installation or rebuilding lgpio is attempted. Start with haunt-gate only; deploy to other room Pis after successful test. The four sliders allow -45 to +45 degrees, and the servo signal detaches after 0.55s to reduce jitter. Detached servos do not hold their position; do not attach load-bearing props. The dashboard displays the last commanded angle, not measured shaft position. Restart does not move servos until commanded.
+
+Deployment:
+1. Commit files to GitHub.
+2. On haunt-gate: `cd ~/haunt/haunt-audio-app && git pull && sh install-servo.sh`.
+3. On haunt-master: `cd ~/haunt/haunt-audio-app && git pull && sudo systemctl restart haunt-master`.
+4. Open `http://haunt-master.local:5000`; use Gate servo sliders.
+5. Later run `sh install-servo.sh` on haunt-master, haunt-forest, haunt-corridor, haunt-lift if servos are physically installed there.
+
+Troubleshoot: `journalctl -u haunt-servo -n 50 --no-pager -l`. The agent's Python must be able to import flask and gpiozero; if not, check existing venv packages. If GPIO pin busy, stop test_servo.py before starting service. Servo jitter can be caused by software PWM; hardware-timed PWM is a future enhancement.

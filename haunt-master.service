@@ -5,10 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=haunt
-WorkingDirectory=/home/haunt/haunt-audio-app
-EnvironmentFile=/home/haunt/haunt-audio-app/haunt.env
-ExecStart=/home/haunt/haunt-audio-app/.venv/bin/python master.py
+User=haunt-master
+WorkingDirectory=/home/haunt-master/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt-master/haunt/haunt-audio-app/haunt.env
+ExecStart=/home/haunt-master/haunt/haunt-audio-app/.venv/bin/python /home/haunt-master/haunt/haunt-audio-app/master.py
 Restart=on-failure
 RestartSec=3
 

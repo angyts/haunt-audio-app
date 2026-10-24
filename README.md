@@ -99,3 +99,23 @@ Deployment:
 5. Later run `sh install-servo.sh` on haunt-master, haunt-forest, haunt-corridor, haunt-lift if servos are physically installed there.
 
 Troubleshoot: `journalctl -u haunt-servo -n 50 --no-pager -l`. The agent's Python must be able to import flask and gpiozero; if not, check existing venv packages. If GPIO pin busy, stop test_servo.py before starting service. Servo jitter can be caused by software PWM; hardware-timed PWM is a future enhancement.
+
+# Gui Gui v6 — Ultrasonic monitoring
+
+Based on v5 `master.py`, preserving the existing audio, relay, servo and microphone features.
+
+Files: `master.py` (replace on haunt-master), `ultrasonic_agent.py` and `install-ultrasonic.sh` (add to GitHub).
+
+## First installation
+
+1. Ensure the HC-SR04 has +5V, common ground, TRIG GPIO23 (physical 16), and ECHO GPIO24 (physical 18) **through a verified 5V-to-3.3V resistor divider**. Never connect raw ECHO to GPIO.
+2. Stop the manual ultrasonic test script; only one program should own the sensor GPIO.
+3. On `haunt-gate`: `cd ~/haunt/haunt-audio-app && git pull && sh install-ultrasonic.sh`
+4. Check `systemctl status haunt-ultrasonic --no-pager -l` and `journalctl -u haunt-ultrasonic -n 30 --no-pager`.
+5. On `haunt-master`: `cd ~/haunt/haunt-audio-app && git pull && sudo systemctl restart haunt-master`.
+6. Open `http://haunt-master.local:5000` and check the Ghost Gate distance panel.
+
+The same agent can be installed on other room Pis later, using the same GPIO assignment. It uses `HAUNT_TOKEN` from the existing `haunt.env`, port 5054, and only reports distance/threshold status; it **does not trigger physical effects**. Threshold and enabled state reset to defaults on service restart. Other rooms will show Sensor offline until installed.
+
+If `haunt-ultrasonic` fails with GPIO busy, stop any manual `test_ultrasonic.py` process. If it reports timeout or always max range, verify power, shared ground, and the ECHO divider. Do not use the sensor for life-safety, occupancy counting, or exit control.
+

@@ -126,7 +126,7 @@ SCENE_PATH = Path(__file__).resolve().parent / 'room1_scene.json'
 CHANT_PATH = Path.home() / 'haunt-audio' / 'chanting.mp3'
 SCENE_HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Scene Manager</title><style>
 body{background:#101522;color:#e9eef9;font:16px system-ui;max-width:950px;margin:25px auto;padding:14px}a{color:#b9a8ff}textarea{width:100%;box-sizing:border-box;background:#151c2b;color:#e9eef9;border:1px solid #5a6681;border-radius:8px;padding:12px;font:14px monospace}button,input{padding:10px;margin:5px;border-radius:7px}button{cursor:pointer}.card{background:#20283a;border-radius:12px;padding:18px;margin:14px 0}small{color:#b7c4d7}pre{white-space:pre-wrap}
-</style></head><body><a href="/">← Main dashboard</a><h1>👻 Scene Manager</h1><div class="card"><h2>Room 1 — Tricks</h2><p>Edit trigger distances, chanting volume, cooldown and servo sequence. <b>Save</b> takes effect automatically. The scene starts disabled for safety.</p><textarea id="editor" rows="24" spellcheck="false"></textarea><p><button onclick="save()">Save JSON</button><button onclick="toggle(true)">Arm scene</button><button onclick="toggle(false)">Disarm scene</button><button onclick="reload()">Reload</button></p><small id="message"></small></div><div class="card"><h2>Upload chanting audio</h2><p>Background audio remains controlled from the main dashboard. Upload a separate chanting MP3 here for the overlay.</p><input id="chant" type="file" accept=".mp3,audio/mpeg"><button onclick="uploadChant()">Upload chanting.mp3</button><p><small id="upload-message"></small></p></div><div class="card"><h2>Room 1 status</h2><button onclick="status()">Refresh status</button><pre id="status"></pre></div><script>
+</style></head><body><a href="/">← Main dashboard</a><h1>👻 Scene Manager</h1><div class="card"><h2>Room 1 — Tricks</h2><p>Edit distance thresholds, audio and on_arm / on_approach / on_close / on_exit actions. Last relay and servo states persist until another command changes them. <b>Save</b> takes effect automatically. The scene starts disabled for safety.</p><textarea id="editor" rows="24" spellcheck="false"></textarea><p><button onclick="save()">Save JSON</button><button onclick="toggle(true)">Arm scene</button><button onclick="toggle(false)">Disarm scene</button><button onclick="reload()">Reload</button></p><small id="message"></small></div><div class="card"><h2>Upload chanting audio</h2><p>Background audio remains controlled from the main dashboard. Upload a separate chanting MP3 here for the overlay.</p><input id="chant" type="file" accept=".mp3,audio/mpeg"><button onclick="uploadChant()">Upload chanting.mp3</button><p><small id="upload-message"></small></p></div><div class="card"><h2>Room 1 status</h2><button onclick="status()">Refresh status</button><pre id="status"></pre></div><script>
 async function api(url,opts){const r=await fetch(url,opts);const d=await r.json();if(!r.ok)throw Error(d.error||r.status);return d}
 async function reload(){try{const d=await api('/api/scenes/room1');document.getElementById('editor').value=JSON.stringify(d,null,2);document.getElementById('message').textContent='Loaded'}catch(e){document.getElementById('message').textContent=e.message}}
 async function save(){try{const d=JSON.parse(document.getElementById('editor').value);await api('/api/scenes/room1',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});document.getElementById('message').textContent='Saved. Scene reloads automatically.';await reload()}catch(e){document.getElementById('message').textContent='Error: '+e.message}}
@@ -136,27 +136,51 @@ async function status(){try{const [u,s]=await Promise.all([api('/api/master/ultr
 reload();status();</script></body></html>'''
 
 def validate_scene(d):
-    if not isinstance(d, dict): raise ValueError('Scene must be an object')
-    expected={'enabled','trigger_cm','near_cm','release_cm','chant_min_volume','chant_max_volume','background_volume','chant_file','cooldown_seconds','servo_sequence'}
-    if set(d)!=expected: raise ValueError('Missing or unsupported settings: '+str(sorted(set(d)^expected)))
-    if type(d['enabled']) is not bool: raise ValueError('enabled must be true/false')
-    def number(k,low,high):
-        v=d[k]
-        if type(v) not in (int,float) or not low<=v<=high: raise ValueError(f'{k} must be between {low} and {high}')
-    number('near_cm',20,299);number('trigger_cm',21,299);number('release_cm',22,300)
-    if not d['near_cm']<d['trigger_cm']<d['release_cm']: raise ValueError('Require near < trigger < release')
-    for k in ('chant_min_volume','chant_max_volume','background_volume'): number(k,0,100)
-    if d['chant_min_volume']>d['chant_max_volume']: raise ValueError('Chant minimum exceeds maximum')
-    number('cooldown_seconds',2,300)
-    if d['chant_file']!=str(CHANT_PATH): raise ValueError('Chant file path must remain '+str(CHANT_PATH))
-    steps=d['servo_sequence']
-    if not isinstance(steps,list) or len(steps)>20: raise ValueError('servo_sequence must have at most 20 steps')
-    for i,step in enumerate(steps):
-        if not isinstance(step,dict) or set(step)!={'servo','angle','hold','pause'}: raise ValueError(f'Invalid step {i+1}')
-        if type(step['servo']) is not int or step['servo'] not in (1,2,3,4): raise ValueError(f'Invalid servo in step {i+1}')
-        if type(step['angle']) not in (int,float) or not -45<=step['angle']<=45: raise ValueError(f'Invalid angle in step {i+1}')
-        for k in ('hold','pause'):
-            if type(step[k]) not in (int,float) or not 0<=step[k]<=15: raise ValueError(f'Invalid {k} in step {i+1}')
+    if not isinstance(d,dict): raise ValueError('Scene must be a JSON object')
+    expected={'enabled','near_cm','trigger_cm','release_cm','servo_trigger_cm','chant_min_volume','chant_max_volume','background_volume','chant_file','cooldown_seconds','on_arm','on_approach','on_close','on_exit'}
+    if set(d)!=expected: raise ValueError('Missing or unsupported keys: '+str(sorted(set(d)^expected)))
+    if type(d['enabled']) is not bool: raise ValueError('enabled must be true or false')
+    def number(value,low,high,label):
+        if type(value) not in (int,float) or not low<=value<=high: raise ValueError(f'{label} must be {low}..{high}')
+    for k in ('near_cm','trigger_cm','release_cm','servo_trigger_cm'): number(d[k],10,300,k)
+    if not d['near_cm']<=d['servo_trigger_cm']<d['trigger_cm']<d['release_cm']: raise ValueError('Require near <= servo_trigger < trigger < release')
+    for k in ('chant_min_volume','chant_max_volume','background_volume'): number(d[k],0,100,k)
+    if d['chant_min_volume']>d['chant_max_volume']: raise ValueError('Chant min exceeds max')
+    number(d['cooldown_seconds'],0,300,'cooldown_seconds')
+    if d['chant_file']!=str(CHANT_PATH): raise ValueError('chant_file must be '+str(CHANT_PATH))
+    def action(x):
+        if not isinstance(x,dict): raise ValueError('Each action must be an object')
+        keys=set(x)
+        if 'parallel' in x:
+            if not keys<= {'parallel','pause'}: raise ValueError('Invalid parallel keys')
+            moves=x['parallel']
+            if not isinstance(moves,list) or not 1<=len(moves)<=4: raise ValueError('parallel requires 1..4 servos')
+            if len({m.get('servo') for m in moves if isinstance(m,dict)})!=len(moves): raise ValueError('Duplicate parallel servo')
+            for m in moves:
+                if not isinstance(m,dict) or set(m)!={'servo','angle'}: raise ValueError('Invalid parallel move')
+                servo(m)
+        elif 'servo' in x:
+            if not keys<= {'servo','angle','pause'} or 'angle' not in x: raise ValueError('Invalid servo action')
+            servo(x)
+        elif 'relay' in x:
+            if not keys<= {'relay','state','pause'} or 'state' not in x: raise ValueError('Invalid relay action')
+            if type(x['relay']) is not int or x['relay'] not in (1,2): raise ValueError('Relay must be 1 or 2')
+            if x['state'] not in ('on','off'): raise ValueError('Relay state must be on/off')
+        elif x.get('effect')=='blink':
+            if not keys<= {'effect','relay','on_seconds','off_seconds','cycles','final_state','pause'}: raise ValueError('Invalid blink keys')
+            if type(x.get('relay')) is not int or x['relay'] not in (1,2): raise ValueError('Invalid blink relay')
+            for k in ('on_seconds','off_seconds'): number(x.get(k),0.3,5,k)
+            if type(x.get('cycles')) is not int or not 1<=x['cycles']<=20: raise ValueError('cycles must be 1..20')
+            if x.get('final_state','off') not in ('on','off'): raise ValueError('Invalid final_state')
+        else: raise ValueError('Unknown action')
+        number(x.get('pause',0),0,15,'pause')
+    def servo(m):
+        if type(m['servo']) is not int or m['servo'] not in (1,2,3,4): raise ValueError('Servo must be 1..4')
+        number(m['angle'],-45,45,'angle')
+    for k in ('on_arm','on_approach','on_close','on_exit'):
+        steps=d[k]
+        if not isinstance(steps,list) or len(steps)>40: raise ValueError(k+' must be a list of <=40 actions')
+        for step in steps: action(step)
     return d
 
 @app.get('/scenes')

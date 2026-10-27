@@ -1,0 +1,13 @@
+[Unit]
+Description=Gui Gui Lift Button Monitor
+After=network.target
+[Service]
+Type=simple
+User=haunt-lift
+WorkingDirectory=/home/haunt-lift/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt-lift/haunt/haunt-audio-app/haunt.env
+ExecStart=/home/haunt-lift/haunt/haunt-audio-app/.venv/bin/python /home/haunt-lift/haunt/haunt-audio-app/lift_button_agent.py
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "trigger_cm": 100,
+  "near_cm": 35,
+  "release_cm": 140,
+  "chant_min_volume": 15,
+  "chant_max_volume": 85,
+  "background_volume": 45,
+  "chant_file": "/home/haunt-master/haunt-audio/chanting.mp3",
+  "cooldown_seconds": 20,
+  "servo_sequence": [
+    {"servo": 1, "angle": 30, "hold": 1.0, "pause": 0.8},
+    {"servo": 2, "angle": -30, "hold": 1.0, "pause": 0.8},
+    {"servo": 3, "angle": 35, "hold": 1.0, "pause": 0.8},
+    {"servo": 4, "angle": -35, "hold": 1.0, "pause": 0.8}
+  ]
+}

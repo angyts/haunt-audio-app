@@ -1,0 +1,15 @@
+[Unit]
+Description=Gui Gui Room 3 Corridor Scene
+After=network-online.target haunt-servo.service haunt-ultrasonic.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=haunt-corridor
+WorkingDirectory=/home/haunt-corridor/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt-corridor/haunt/haunt-audio-app/haunt.env
+ExecStart=/home/haunt-corridor/haunt/haunt-audio-app/.venv/bin/python /home/haunt-corridor/haunt/haunt-audio-app/room3_scene.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=8
+[Install]
+WantedBy=multi-user.target

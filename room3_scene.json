@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "near_cm": 25,
+  "trigger_cm": 40,
+  "release_cm": 50,
+  "servo_trigger_cm": 30,
+  "cooldown_seconds": 15,
+  "laughter_volume": 65,
+  "on_close": [
+    {"servo": 1, "angle": 45, "pause": 2.0},
+    {"servo": 2, "angle": -45, "pause": 0.5}
+  ],
+  "on_exit": [
+    {"servo": 1, "angle": 0, "pause": 0.5},
+    {"servo": 2, "angle": 0, "pause": 0.0}
+  ]
+}

@@ -12,7 +12,7 @@ ROOMS = {
     'lift': 'haunt-lift.local',
     'gate': 'haunt-gate.local',
 }
-HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><p><a href="/scenes" style="color:#b9a8ff;font-weight:bold">⚙ Scene Manager — Rooms 1 & 2</a></p><div id="rooms"></div><section class="room"><h2>🎙 Gui Gui Voice Lab</h2><p class="state" id="mic-status">Checking microphone...</p><div id="mic-controls"></div><button onclick="micSave()">Apply settings</button><button onclick="micToggle(true)">Enable</button><button onclick="micToggle(false)">Disable</button><p><small id="mic-msg"></small></p></section><script>
+HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><p><a href="/scenes" style="color:#b9a8ff;font-weight:bold">⚙ Scene Manager — Rooms 1, 2 & 3</a></p><div id="rooms"></div><section class="room"><h2>🎙 Gui Gui Voice Lab</h2><p class="state" id="mic-status">Checking microphone...</p><div id="mic-controls"></div><button onclick="micSave()">Apply settings</button><button onclick="micToggle(true)">Enable</button><button onclick="micToggle(false)">Disable</button><p><small id="mic-msg"></small></p></section><script>
 const names = {{names|tojson}};
 const root=document.getElementById('rooms');
 for(const name of names){const div=document.createElement('div');div.className='room';div.innerHTML=`<h2>${name}</h2><p class="state" id="s-${name}">Checking...</p><input id="f-${name}" type="file" accept="audio/*"><button onclick="upload('${name}')">Upload</button><p><button onclick="cmd('${name}','play')">▶ Play / Resume</button><button onclick="cmd('${name}','pause')">⏸ Pause</button><button onclick="cmd('${name}','stop')">■ Stop</button></p><label>Volume <span id="v-${name}">70</span>% <input type="range" min="0" max="100" value="70" id="vol-${name}" oninput="document.getElementById('v-${name}').textContent=this.value" onchange="setVolume('${name}',this.value)"></label><br><div class="relay-controls"><h3>💡 Lighting / Relays</h3><p id="rs-${name}">Checking relays...</p><button onclick="relaySet('${name}',1,true)">Relay 1 ON</button><button onclick="relaySet('${name}',1,false)">OFF</button><br><button onclick="relaySet('${name}',2,true)">Relay 2 ON</button><button onclick="relaySet('${name}',2,false)">OFF</button></div><div class="servo-controls"><h3>🦾 Servo Motors</h3><p id="ss-${name}">Checking servos...</p><div id="sv-${name}"></div><button onclick="servoCentre('${name}')">Centre all</button></div><div class="ultrasonic-controls"><h3>📡 Distance Sensor</h3><p id="us-${name}">Checking sensor...</p><label>Trigger distance: <b id="ut-${name}">80</b> cm <input type="range" min="10" max="300" step="5" value="80" id="ud-${name}" oninput="document.getElementById('ut-${name}').textContent=this.value" onchange="ultraSet('${name}',{threshold_cm:Number(this.value)})"></label><p><button onclick="ultraSet('${name}',{enabled:true})">Enable</button><button onclick="ultraSet('${name}',{enabled:false})">Disable</button></p><small>Monitoring only: no automatic relay or servo actions.</small></div><small id="m-${name}"></small>`;root.appendChild(div)}
@@ -141,6 +141,15 @@ async function r2override(v){try{await r2api('/override',{method:'POST',headers:
 async function r2upload(){try{const f=document.getElementById('r2audio').files[0];if(!f)throw Error('Choose MP3');const form=new FormData();form.append('file',f);await r2api('/audio',{method:'POST',body:form});document.getElementById('r2msg').textContent='Bubbling audio uploaded'}catch(e){document.getElementById('r2msg').textContent=e.message}}
 async function r2status(){try{document.getElementById('r2status').textContent=JSON.stringify(await r2api('/status'),null,2)}catch(e){document.getElementById('r2status').textContent=e.message}}
 r2load();r2status();setInterval(r2status,3000);
+</script><div class="card"><h2>Room 3 — Corridor of Shadows</h2><p>40 cm: laughter starts. 30 cm: Servo 1 moves, then Servo 2 after 2 seconds. 50 cm: reset after 1 second clear.</p><textarea id="r3editor" rows="20" spellcheck="false"></textarea><p><button onclick="r3save()">Save Room 3 JSON</button><button onclick="r3arm(true)">Arm</button><button onclick="r3arm(false)">Disarm</button><button onclick="r3load()">Reload</button><button onclick="r3override(true)">STOP SCENE</button><button onclick="r3override(false)">Resume automatic</button></p><small id="r3msg"></small><h3>Upload laughter MP3</h3><input id="r3audio" type="file" accept=".mp3,audio/mpeg"><button onclick="r3upload()">Upload to haunt-corridor</button><h3>Room 3 status</h3><pre id="r3status"></pre></div><script>
+async function r3api(path,opts){const r=await fetch('/api/scenes/room3'+path,opts);const d=await r.json();if(!r.ok)throw Error(d.error||r.status);return d}
+async function r3load(){try{const d=await r3api('');document.getElementById('r3editor').value=JSON.stringify(d,null,2);document.getElementById('r3msg').textContent='Loaded'}catch(e){document.getElementById('r3msg').textContent=e.message}}
+async function r3save(){try{const d=JSON.parse(document.getElementById('r3editor').value);await r3api('',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});document.getElementById('r3msg').textContent='Saved on haunt-corridor';await r3load()}catch(e){document.getElementById('r3msg').textContent=e.message}}
+async function r3arm(v){try{const d=JSON.parse(document.getElementById('r3editor').value);d.enabled=v;await r3api('',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});await r3load()}catch(e){document.getElementById('r3msg').textContent=e.message}}
+async function r3override(v){try{await r3api('/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stop:v})});await r3status()}catch(e){document.getElementById('r3msg').textContent=e.message}}
+async function r3upload(){try{const f=document.getElementById('r3audio').files[0];if(!f)throw Error('Choose MP3');const form=new FormData();form.append('file',f);await r3api('/audio',{method:'POST',body:form});document.getElementById('r3msg').textContent='Laughter audio uploaded'}catch(e){document.getElementById('r3msg').textContent=e.message}}
+async function r3status(){try{document.getElementById('r3status').textContent=JSON.stringify(await r3api('/status'),null,2)}catch(e){document.getElementById('r3status').textContent=e.message}}
+r3load();r3status();setInterval(r3status,3000);
 </script></body></html>'''
 
 def validate_scene(d):
@@ -256,5 +265,29 @@ def room2_status_proxy():return room2_forward('/status')
 def room2_override_proxy():return room2_forward('/override')
 @app.post('/api/scenes/room2/audio')
 def room2_audio_proxy():return room2_forward('/audio')
+
+
+# Room 3: restricted proxy to haunt-corridor.
+def room3_forward(path):
+    try:
+        kw={'headers':{'X-Haunt-Token':TOKEN},'timeout':20 if path=='/audio' else 5}
+        if request.method=='PUT' or (request.method=='POST' and path=='/override'):
+            kw['json']=request.get_json(silent=True)
+        elif path=='/audio' and request.method=='POST':
+            f=request.files.get('file')
+            if not f or Path(f.filename).suffix.lower()!='.mp3':return jsonify(error='Select MP3'),400
+            kw['files']={'file':(f.filename,f.stream,'audio/mpeg')}
+        r=requests.request(request.method,'http://haunt-corridor.local:5056'+path,**kw)
+        return (r.content,r.status_code,{'Content-Type':'application/json'})
+    except requests.RequestException as exc:
+        return jsonify(error='Room 3 scene unavailable: '+type(exc).__name__),503
+@app.route('/api/scenes/room3',methods=['GET','PUT'])
+def room3_config_proxy():return room3_forward('/config')
+@app.get('/api/scenes/room3/status')
+def room3_status_proxy():return room3_forward('/status')
+@app.post('/api/scenes/room3/override')
+def room3_override_proxy():return room3_forward('/override')
+@app.post('/api/scenes/room3/audio')
+def room3_audio_proxy():return room3_forward('/audio')
 
 if __name__ == '__main__': app.run(host='0.0.0.0',port=5000)

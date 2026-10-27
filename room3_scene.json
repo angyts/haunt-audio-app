@@ -28,7 +28,34 @@
       "servo": 2,
       "angle": 0,
       "pause": 0.0
+    },
+    {
+      "relay": 1,
+      "state": "off"
+    },
+    {
+      "relay": 2,
+      "state": "off"
     }
   ],
-  "on_arm": []
+  "on_arm": [
+    {
+      "relay": 1,
+      "state": "off"
+    },
+    {
+      "relay": 2,
+      "state": "off"
+    }
+  ],
+  "on_approach": [
+    {
+      "relay": 1,
+      "state": "on"
+    },
+    {
+      "relay": 2,
+      "state": "on"
+    }
+  ]
 }

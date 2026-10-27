@@ -30,17 +30,25 @@ def number(v, lo, hi):
 
 def validate(d):
     if not isinstance(d,dict): raise ValueError('JSON object required')
-    keys = {'enabled','near_cm','trigger_cm','release_cm','cooldown_seconds','laughter_volume','servo_trigger_cm','on_close','on_exit'}
+    keys = {'enabled','near_cm','trigger_cm','release_cm','cooldown_seconds','laughter_volume','servo_trigger_cm','on_arm','on_close','on_exit'}
     if set(d) != keys: raise ValueError('Missing or unknown fields: '+str(sorted(set(d)^keys)))
     if type(d['enabled']) is not bool: raise ValueError('enabled must be boolean')
     if not all(number(d[k],10,300) for k in ('near_cm','trigger_cm','release_cm','servo_trigger_cm')): raise ValueError('Invalid distances')
     if not d['near_cm'] <= d['servo_trigger_cm'] <= d['trigger_cm'] < d['release_cm']: raise ValueError('Require near <= servo_trigger <= trigger < release')
     if not number(d['cooldown_seconds'],0,300) or not number(d['laughter_volume'],0,100): raise ValueError('Invalid cooldown or volume')
-    for field in ('on_close','on_exit'):
+    for field in ('on_arm','on_close','on_exit'):
         steps=d[field]
-        if not isinstance(steps,list) or len(steps)>12: raise ValueError('Invalid '+field)
+        if not isinstance(steps,list) or len(steps)>20: raise ValueError('Invalid '+field)
         for a in steps:
-            if not isinstance(a,dict) or set(a)!={'servo','angle','pause'} or type(a['servo']) is not int or a['servo'] not in (1,2) or not number(a['angle'],-90,90) or not number(a['pause'],0,20): raise ValueError('Invalid servo action')
+            if not isinstance(a,dict): raise ValueError('Action must be object')
+            if 'relay' in a:
+                if set(a) not in ({'relay','state'},{'relay','state','pause'}): raise ValueError('Invalid relay action')
+                if type(a['relay']) is not int or a['relay'] not in (1,2) or a['state'] not in ('on','off'): raise ValueError('Invalid relay or state')
+            elif 'servo' in a:
+                if set(a) not in ({'servo','angle'},{'servo','angle','pause'}): raise ValueError('Invalid servo action')
+                if type(a['servo']) is not int or a['servo'] not in (1,2) or not number(a['angle'],-90,90): raise ValueError('Invalid servo action')
+            else: raise ValueError('Unknown action')
+            if not number(a.get('pause',0),0,20): raise ValueError('Invalid pause')
     return d
 
 def load(): return validate(json.loads(CONFIG.read_text(encoding='utf-8')))
@@ -66,8 +74,11 @@ def perform(steps):
     try:
         for a in steps:
             if CANCEL.is_set() or STOP.is_set(): break
-            api(5053,f"/servo/{a['servo']}",{'angle':a['angle']})
-            if CANCEL.wait(a['pause']): break
+            if 'relay' in a:
+                api(5052,f"/relay/{a['relay']}",{'on':a['state']=='on'})
+            else:
+                api(5053,f"/servo/{a['servo']}",{'angle':a['angle']})
+            if CANCEL.wait(a.get('pause',0)): break
     except Exception as exc:
         with LOCK: state['error']='Servo sequence: '+str(exc)[:130]
     finally:
@@ -98,6 +109,7 @@ def loop():
                 continue
             if not was_enabled:
                 was_enabled=True;armed=True;near_fired=False;exit_since=None
+                begin(c['on_arm'])
             s=api(5054,'/status');d=s.get('distance_cm')
             stale=bool(s.get('stale') or not s.get('enabled') or type(d) not in (int,float))
             with LOCK: state.update(distance_cm=d,stale=stale,error=None)

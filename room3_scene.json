@@ -7,11 +7,28 @@
   "cooldown_seconds": 15,
   "laughter_volume": 65,
   "on_close": [
-    {"servo": 1, "angle": 45, "pause": 2.0},
-    {"servo": 2, "angle": -45, "pause": 0.5}
+    {
+      "servo": 1,
+      "angle": 45,
+      "pause": 2.0
+    },
+    {
+      "servo": 2,
+      "angle": -45,
+      "pause": 0.5
+    }
   ],
   "on_exit": [
-    {"servo": 1, "angle": 0, "pause": 0.5},
-    {"servo": 2, "angle": 0, "pause": 0.0}
-  ]
+    {
+      "servo": 1,
+      "angle": 0,
+      "pause": 0.5
+    },
+    {
+      "servo": 2,
+      "angle": 0,
+      "pause": 0.0
+    }
+  ],
+  "on_arm": []
 }

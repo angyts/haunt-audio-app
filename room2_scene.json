@@ -1,0 +1,45 @@
+{
+  "enabled": false,
+  "near_cm": 30,
+  "trigger_cm": 60,
+  "release_cm": 70,
+  "cooldown_seconds": 20,
+  "bubbling_file": "/home/haunt-forest/haunt-audio/bubbling.mp3",
+  "bubbling_volume": 45,
+  "on_arm": [
+    {
+      "relay": 1,
+      "state": "on"
+    }
+  ],
+  "on_approach": [
+    {
+      "servo": 1,
+      "effect": "oscillate",
+      "min_angle": -45,
+      "max_angle": 45,
+      "step": 3,
+      "step_delay": 0.04
+    },
+    {
+      "relay": 2,
+      "state": "off"
+    }
+  ],
+  "on_close": [
+    {
+      "relay": 2,
+      "state": "on"
+    }
+  ],
+  "on_exit": [
+    {
+      "servo": 1,
+      "effect": "stop"
+    },
+    {
+      "relay": 2,
+      "state": "off"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Gui Gui Room 2 Scene Controller
+After=network-online.target haunt-servo.service haunt-ultrasonic.service haunt-relay.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=haunt-forest
+WorkingDirectory=/home/haunt-forest/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt-forest/haunt/haunt-audio-app/haunt.env
+ExecStart=/home/haunt-forest/haunt/haunt-audio-app/.venv/bin/python /home/haunt-forest/haunt/haunt-audio-app/room2_scene.py
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=multi-user.target

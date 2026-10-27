@@ -12,7 +12,7 @@ ROOMS = {
     'lift': 'haunt-lift.local',
     'gate': 'haunt-gate.local',
 }
-HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><p><a href="/scenes" style="color:#b9a8ff;font-weight:bold">⚙ Scene Manager — Room 1</a></p><div id="rooms"></div><section class="room"><h2>🎙 Gui Gui Voice Lab</h2><p class="state" id="mic-status">Checking microphone...</p><div id="mic-controls"></div><button onclick="micSave()">Apply settings</button><button onclick="micToggle(true)">Enable</button><button onclick="micToggle(false)">Disable</button><p><small id="mic-msg"></small></p></section><script>
+HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><p><a href="/scenes" style="color:#b9a8ff;font-weight:bold">⚙ Scene Manager — Rooms 1 & 2</a></p><div id="rooms"></div><section class="room"><h2>🎙 Gui Gui Voice Lab</h2><p class="state" id="mic-status">Checking microphone...</p><div id="mic-controls"></div><button onclick="micSave()">Apply settings</button><button onclick="micToggle(true)">Enable</button><button onclick="micToggle(false)">Disable</button><p><small id="mic-msg"></small></p></section><script>
 const names = {{names|tojson}};
 const root=document.getElementById('rooms');
 for(const name of names){const div=document.createElement('div');div.className='room';div.innerHTML=`<h2>${name}</h2><p class="state" id="s-${name}">Checking...</p><input id="f-${name}" type="file" accept="audio/*"><button onclick="upload('${name}')">Upload</button><p><button onclick="cmd('${name}','play')">▶ Play / Resume</button><button onclick="cmd('${name}','pause')">⏸ Pause</button><button onclick="cmd('${name}','stop')">■ Stop</button></p><label>Volume <span id="v-${name}">70</span>% <input type="range" min="0" max="100" value="70" id="vol-${name}" oninput="document.getElementById('v-${name}').textContent=this.value" onchange="setVolume('${name}',this.value)"></label><br><div class="relay-controls"><h3>💡 Lighting / Relays</h3><p id="rs-${name}">Checking relays...</p><button onclick="relaySet('${name}',1,true)">Relay 1 ON</button><button onclick="relaySet('${name}',1,false)">OFF</button><br><button onclick="relaySet('${name}',2,true)">Relay 2 ON</button><button onclick="relaySet('${name}',2,false)">OFF</button></div><div class="servo-controls"><h3>🦾 Servo Motors</h3><p id="ss-${name}">Checking servos...</p><div id="sv-${name}"></div><button onclick="servoCentre('${name}')">Centre all</button></div><div class="ultrasonic-controls"><h3>📡 Distance Sensor</h3><p id="us-${name}">Checking sensor...</p><label>Trigger distance: <b id="ut-${name}">80</b> cm <input type="range" min="10" max="300" step="5" value="80" id="ud-${name}" oninput="document.getElementById('ut-${name}').textContent=this.value" onchange="ultraSet('${name}',{threshold_cm:Number(this.value)})"></label><p><button onclick="ultraSet('${name}',{enabled:true})">Enable</button><button onclick="ultraSet('${name}',{enabled:false})">Disable</button></p><small>Monitoring only: no automatic relay or servo actions.</small></div><small id="m-${name}"></small>`;root.appendChild(div)}
@@ -133,7 +133,15 @@ async function save(){try{const d=JSON.parse(document.getElementById('editor').v
 async function toggle(v){try{const d=JSON.parse(document.getElementById('editor').value);d.enabled=v;document.getElementById('editor').value=JSON.stringify(d,null,2);await save()}catch(e){document.getElementById('message').textContent=e.message}}
 async function uploadChant(){try{const f=document.getElementById('chant').files[0];if(!f)throw Error('Select MP3 first');const fd=new FormData();fd.append('file',f);await api('/api/scenes/room1/chant',{method:'POST',body:fd});document.getElementById('upload-message').textContent='Uploaded chanting.mp3'}catch(e){document.getElementById('upload-message').textContent=e.message}}
 async function status(){try{const [u,s]=await Promise.all([api('/api/master/ultrasonic'),api('/api/scenes/room1')]);document.getElementById('status').textContent=JSON.stringify({sensor:u,scene_enabled:s.enabled},null,2)}catch(e){document.getElementById('status').textContent=e.message}}
-reload();status();</script></body></html>'''
+reload();status();</script><div class="card"><h2>Room 2 — Haunted Well / Mixing Pail</h2><p>Edit the Room 2 scene running on haunt-forest. The stirring servo starts at trigger distance; red lights activate at near distance. <b>Manual Stop</b> inhibits automatic restarting until you click Resume.</p><textarea id="r2editor" rows="23" spellcheck="false"></textarea><p><button onclick="r2save()">Save Room 2 JSON</button><button onclick="r2arm(true)">Arm</button><button onclick="r2arm(false)">Disarm</button><button onclick="r2load()">Reload</button><button onclick="r2override(true)">STOP STIRRING</button><button onclick="r2override(false)">Resume automatic</button></p><small id="r2msg"></small><h3>Upload bubbling sound</h3><input id="r2audio" type="file" accept=".mp3,audio/mpeg"><button onclick="r2upload()">Upload to haunt-forest</button><h3>Room 2 status</h3><pre id="r2status"></pre></div><script>async function r2api(path,opts){const r=await fetch('/api/scenes/room2'+path,opts);const d=await r.json();if(!r.ok)throw Error(d.error||r.status);return d}
+async function r2load(){try{const d=await r2api('');document.getElementById('r2editor').value=JSON.stringify(d,null,2);document.getElementById('r2msg').textContent='Loaded'}catch(e){document.getElementById('r2msg').textContent=e.message}}
+async function r2save(){try{const d=JSON.parse(document.getElementById('r2editor').value);await r2api('',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});document.getElementById('r2msg').textContent='Saved on haunt-forest';await r2load()}catch(e){document.getElementById('r2msg').textContent=e.message}}
+async function r2arm(v){try{const d=JSON.parse(document.getElementById('r2editor').value);d.enabled=v;await r2api('',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});await r2load()}catch(e){document.getElementById('r2msg').textContent=e.message}}
+async function r2override(v){try{await r2api('/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stop:v})});await r2status()}catch(e){document.getElementById('r2msg').textContent=e.message}}
+async function r2upload(){try{const f=document.getElementById('r2audio').files[0];if(!f)throw Error('Choose MP3');const form=new FormData();form.append('file',f);await r2api('/audio',{method:'POST',body:form});document.getElementById('r2msg').textContent='Bubbling audio uploaded'}catch(e){document.getElementById('r2msg').textContent=e.message}}
+async function r2status(){try{document.getElementById('r2status').textContent=JSON.stringify(await r2api('/status'),null,2)}catch(e){document.getElementById('r2status').textContent=e.message}}
+r2load();r2status();setInterval(r2status,3000);
+</script></body></html>'''
 
 def validate_scene(d):
     if not isinstance(d,dict): raise ValueError('Scene must be a JSON object')
@@ -223,5 +231,30 @@ def chant_upload():
     os.chmod(tempname,0o644)
     os.replace(tempname,CHANT_PATH)
     return jsonify(ok=True,file='chanting.mp3')
+
+
+# Room 2: authenticated proxy to haunt-forest's restricted scene service.
+def room2_forward(path,method=None):
+    method=method or request.method
+    try:
+        kw={'headers':{'X-Haunt-Token':TOKEN},'timeout':20 if path=='/audio' else 5}
+        if method=='PUT' or (method=='POST' and path=='/override'):
+            kw['json']=request.get_json(silent=True)
+        elif path=='/audio' and method=='POST':
+            f=request.files.get('file')
+            if not f or Path(f.filename).suffix.lower()!='.mp3':return jsonify(error='Select MP3'),400
+            kw['files']={'file':(f.filename,f.stream,'audio/mpeg')}
+        r=requests.request(method,'http://haunt-forest.local:5055'+(path or '/config'),**kw)
+        return (r.content,r.status_code,{'Content-Type':'application/json'})
+    except requests.RequestException as exc:
+        return jsonify(error='Room 2 scene unavailable: '+type(exc).__name__),503
+@app.route('/api/scenes/room2',methods=['GET','PUT'])
+def room2_config_proxy():return room2_forward('/config')
+@app.get('/api/scenes/room2/status')
+def room2_status_proxy():return room2_forward('/status')
+@app.post('/api/scenes/room2/override')
+def room2_override_proxy():return room2_forward('/override')
+@app.post('/api/scenes/room2/audio')
+def room2_audio_proxy():return room2_forward('/audio')
 
 if __name__ == '__main__': app.run(host='0.0.0.0',port=5000)

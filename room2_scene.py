@@ -100,11 +100,19 @@ def loop():
                 was_enabled=False
                 continue
             if d>=c['release_cm']:
-                if exiting is None:exiting=time.monotonic()
-                if time.monotonic()-exiting>=1.0 and not armed:
-                    execute(c['on_exit']);audio_stop();armed=True;close=False
-                with LOCK:state['phase']='idle'
-            else:exiting=None
+                if exiting is None:
+                    exiting=time.monotonic()
+                if time.monotonic()-exiting>=1.0:
+                    # Always stop bubbling after a confirmed exit, even if
+                    # the scene has already rearmed. This is idempotent.
+                    audio_stop()
+                    if not armed:
+                        execute(c['on_exit'])
+                        armed=True
+                        close=False
+                    with LOCK:state['phase']='idle'
+            else:
+                exiting=None
             if d<=c['trigger_cm']:
                 audio_start(c['bubbling_volume'])
                 if armed and time.monotonic()-last>=c['cooldown_seconds']:

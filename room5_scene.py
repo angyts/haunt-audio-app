@@ -32,6 +32,10 @@ def api(port, path, data=None):
 
 def relay(number, on): api(5052,f'/relay/{number}',{'on':bool(on)})
 
+def move_servo(number, angle):
+    # The existing servo agent detaches PWM after movement. No active holding.
+    api(5053, f'/servo/{number}', {'angle':angle})
+
 def play(kind, volume, loop=False):
     p=PLAYERS.get(kind)
     if p is not None and p.poll() is None: return
@@ -62,7 +66,7 @@ def validate(c):
             'talisman_confirm_seconds','exit_confirm_seconds','ritual_duration_seconds',
             'exit_light_seconds','instruction_volume','ritual_volume',
             'red_blink_cycles','red_blink_on_seconds','red_blink_off_seconds',
-            'white_on_at_seconds'}
+            'white_on_at_seconds','on_seal'}
     if not isinstance(c,dict) or set(c)!=fields:
         raise ValueError('Missing or unknown fields: '+str(sorted(set(c)^fields)))
     if type(c['enabled']) is not bool:raise ValueError('enabled must be boolean')
@@ -78,6 +82,20 @@ def validate(c):
     if type(c['red_blink_cycles']) is not int:raise ValueError('red_blink_cycles must be integer')
     if not c['near_cm']<=c['trigger_cm']<c['release_cm']:raise ValueError('Require near <= trigger < release')
     if c['white_on_at_seconds']>=c['ritual_duration_seconds']:raise ValueError('White light must turn on during ritual')
+    actions=c['on_seal']
+    if not isinstance(actions,list) or len(actions)>12:
+        raise ValueError('on_seal must contain at most 12 actions')
+    for a in actions:
+        if not isinstance(a,dict) or set(a)!={'servo','angle','at_seconds'}:
+            raise ValueError('Each on_seal action requires servo, angle, at_seconds')
+        if type(a['servo']) is not int or a['servo'] not in (1,2,3,4):
+            raise ValueError('Invalid on_seal servo')
+        if type(a['angle']) not in (int,float) or not -90<=a['angle']<=90:
+            raise ValueError('Invalid on_seal angle')
+        if type(a['at_seconds']) not in (int,float) or not 0<=a['at_seconds']<=c['ritual_duration_seconds']:
+            raise ValueError('Invalid on_seal at_seconds')
+    if any(actions[i]['at_seconds']>actions[i+1]['at_seconds'] for i in range(len(actions)-1)):
+        raise ValueError('on_seal must be ordered by at_seconds')
     return c
 
 def config():return validate(json.loads(CONFIG.read_text(encoding='utf-8')))
@@ -87,7 +105,7 @@ def set_lights(white,red):
 
 def loop():
     phase='disabled';talisman_since=None;exit_since=None;start=0;last_end=-1e9
-    white_done=False;blink_last=None;last_enabled=False
+    white_done=False;blink_last=None;last_enabled=False;seal_index=0
     while not STOP.wait(.12):
         try:
             c=config()
@@ -127,7 +145,7 @@ def loop():
                 elif held>=c['talisman_confirm_seconds']:
                     stop_audio('instruction')
                     play('ritual',c['ritual_volume'])
-                    start=now;phase='ritual';white_done=False;blink_last=None
+                    start=now;phase='ritual';white_done=False;blink_last=None;seal_index=0
                 elif not stale and d>=c['release_cm']:
                     if exit_since is None:exit_since=now
                     if now-exit_since>=c['exit_confirm_seconds']:
@@ -135,6 +153,13 @@ def loop():
                 else:exit_since=None
             elif phase=='ritual':
                 elapsed=now-start
+                # Scheduled servo actions run once, in order, without holding PWM.
+                # The loop remains responsive to the sensor and dashboard override.
+                actions=c['on_seal']
+                while seal_index<len(actions) and elapsed>=actions[seal_index]['at_seconds']:
+                    action=actions[seal_index]
+                    seal_index+=1
+                    move_servo(action['servo'],action['angle'])
                 set_status(phase='ritual',elapsed_seconds=round(elapsed,1))
                 if not white_done and elapsed>=c['white_on_at_seconds']:
                     set_lights(True,False);white_done=True
@@ -154,6 +179,8 @@ def loop():
                 if elapsed>=c['exit_light_seconds'] and not present and not stale and d>=c['release_cm']:
                     if exit_since is None:exit_since=now
                     if now-exit_since>=c['exit_confirm_seconds']:
+                        # Reset the ghost after the children have cleared the exit.
+                        move_servo(1,0)
                         set_lights(False,True);phase='idle';last_end=now;exit_since=None
                 else:exit_since=None
         except Exception as exc:

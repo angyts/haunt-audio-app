@@ -13,5 +13,22 @@
   "red_blink_cycles": 5,
   "red_blink_on_seconds": 0.5,
   "red_blink_off_seconds": 0.5,
-  "white_on_at_seconds": 6
+  "white_on_at_seconds": 6,
+  "on_seal": [
+    {
+      "servo": 1,
+      "angle": 45,
+      "at_seconds": 0
+    },
+    {
+      "servo": 1,
+      "angle": -45,
+      "at_seconds": 2
+    },
+    {
+      "servo": 1,
+      "angle": 0,
+      "at_seconds": 4
+    }
+  ]
 }

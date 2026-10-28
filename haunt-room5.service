@@ -1,0 +1,15 @@
+[Unit]
+Description=Gui Gui Room 5 Ghost Gate Scene
+After=network-online.target haunt-ultrasonic.service haunt-relay.service haunt-agent.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=haunt-gate
+WorkingDirectory=/home/haunt-gate/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt-gate/haunt/haunt-audio-app/haunt.env
+ExecStart=/home/haunt-gate/haunt/haunt-audio-app/.venv/bin/python /home/haunt-gate/haunt/haunt-audio-app/room5_scene.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=8
+[Install]
+WantedBy=multi-user.target

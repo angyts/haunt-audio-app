@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "near_cm": 20,
+  "trigger_cm": 35,
+  "release_cm": 45,
+  "cooldown_seconds": 15,
+  "talisman_confirm_seconds": 0.5,
+  "exit_confirm_seconds": 2,
+  "ritual_duration_seconds": 20,
+  "exit_light_seconds": 30,
+  "instruction_volume": 75,
+  "ritual_volume": 80,
+  "red_blink_cycles": 5,
+  "red_blink_on_seconds": 0.5,
+  "red_blink_off_seconds": 0.5,
+  "white_on_at_seconds": 6
+}

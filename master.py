@@ -12,7 +12,7 @@ ROOMS = {
     'lift': 'haunt-lift.local',
     'gate': 'haunt-gate.local',
 }
-HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><p><a href="/scenes" style="color:#b9a8ff;font-weight:bold">⚙ Scene Manager — Rooms 1–4</a></p><div id="rooms"></div><section class="room"><h2>🎙 Gui Gui Voice Lab</h2><p class="state" id="mic-status">Checking microphone...</p><div id="mic-controls"></div><button onclick="micSave()">Apply settings</button><button onclick="micToggle(true)">Enable</button><button onclick="micToggle(false)">Disable</button><p><small id="mic-msg"></small></p></section><script>
+HTML = '''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gui Gui Audio Control</title><style>body{font:16px system-ui;background:#101522;color:#e9eef9;max-width:900px;margin:25px auto;padding:12px}h1{color:#b9a8ff}.room{background:#20283a;padding:18px;border-radius:14px;margin:12px 0}button,input{margin:5px;padding:10px;border-radius:7px}button{cursor:pointer}.state{font-weight:bold;color:#a9e7c2}small{color:#b7c4d7}</style></head><body><h1>👻 Gui Gui Audio Control</h1><p>Upload a loop to a room, then play / pause / stop.</p><p><a href="/scenes" style="color:#b9a8ff;font-weight:bold">⚙ Scene Manager — Rooms 1–5</a></p><div id="rooms"></div><section class="room"><h2>🎙 Gui Gui Voice Lab</h2><p class="state" id="mic-status">Checking microphone...</p><div id="mic-controls"></div><button onclick="micSave()">Apply settings</button><button onclick="micToggle(true)">Enable</button><button onclick="micToggle(false)">Disable</button><p><small id="mic-msg"></small></p></section><script>
 const names = {{names|tojson}};
 const root=document.getElementById('rooms');
 for(const name of names){const div=document.createElement('div');div.className='room';div.innerHTML=`<h2>${name}</h2><p class="state" id="s-${name}">Checking...</p><input id="f-${name}" type="file" accept="audio/*"><button onclick="upload('${name}')">Upload</button><p><button onclick="cmd('${name}','play')">▶ Play / Resume</button><button onclick="cmd('${name}','pause')">⏸ Pause</button><button onclick="cmd('${name}','stop')">■ Stop</button></p><label>Volume <span id="v-${name}">70</span>% <input type="range" min="0" max="100" value="70" id="vol-${name}" oninput="document.getElementById('v-${name}').textContent=this.value" onchange="setVolume('${name}',this.value)"></label><br><div class="relay-controls"><h3>💡 Lighting / Relays</h3><p id="rs-${name}">Checking relays...</p><button onclick="relaySet('${name}',1,true)">Relay 1 ON</button><button onclick="relaySet('${name}',1,false)">OFF</button><br><button onclick="relaySet('${name}',2,true)">Relay 2 ON</button><button onclick="relaySet('${name}',2,false)">OFF</button></div><div class="servo-controls"><h3>🦾 Servo Motors</h3><p id="ss-${name}">Checking servos...</p><div id="sv-${name}"></div><button onclick="servoCentre('${name}')">Centre all</button></div><div class="lift-button-controls" id="lift-button-panel-${name}" style="display:${name==='lift'?'block':'none'}"><h3>🔘 Lift Button · GPIO6</h3><p class="state" id="lift-button-state-${name}">Checking...</p><p id="lift-button-detail-${name}">Press count: —</p><small>Held for 10 seconds: STUCK / HELD warning. Live read-only monitor.</small></div><div class="ultrasonic-controls"><h3>📡 Distance Sensor</h3><p id="us-${name}">Checking sensor...</p><label>Trigger distance: <b id="ut-${name}">80</b> cm <input type="range" min="10" max="300" step="5" value="80" id="ud-${name}" oninput="document.getElementById('ut-${name}').textContent=this.value" onchange="ultraSet('${name}',{threshold_cm:Number(this.value)})"></label><p><button onclick="ultraSet('${name}',{enabled:true})">Enable</button><button onclick="ultraSet('${name}',{enabled:false})">Disable</button></p><small>Monitoring only: no automatic relay or servo actions.</small></div><small id="m-${name}"></small>`;root.appendChild(div)}
@@ -68,6 +68,15 @@ async function r4stop(v){try{await r4api('/override',{method:'POST',headers:{'Co
 async function r4upload(){try{const f=document.getElementById('r4audio').files[0];if(!f)throw Error('Choose MP3');const fd=new FormData();fd.append('file',f);await r4api('/audio',{method:'POST',body:fd});document.getElementById('r4msg').textContent='Journey uploaded to haunt-lift'}catch(e){document.getElementById('r4msg').textContent=e.message}}
 async function r4status(){try{document.getElementById('r4status').textContent=JSON.stringify(await r4api('/status'),null,2)}catch(e){document.getElementById('r4status').textContent=e.message}}
 r4load();r4status();setInterval(r4status,2000);
+</script><div class="card"><h2>Room 5 — Ghost Gate / Final Seal</h2><p>GPIO5 reed switch · 35 cm approach · repeating talisman instructions · 20-second ritual · adjustable exit lights. The door is NEVER controlled by this system.</p><textarea id="r5editor" rows="23" spellcheck="false"></textarea><p><button onclick="r5save()">Save Room 5 JSON</button><button onclick="r5arm(true)">Arm</button><button onclick="r5arm(false)">Disarm</button><button onclick="r5load()">Reload</button><button onclick="r5stop(true)">STOP SCENE</button><button onclick="r5stop(false)">Resume automatic</button></p><small id="r5msg"></small><h3>Upload instruction MP3</h3><input id="r5instruction" type="file" accept=".mp3,audio/mpeg"><button onclick="r5upload('instruction')">Upload instruction</button><h3>Upload final ritual MP3</h3><input id="r5ritual" type="file" accept=".mp3,audio/mpeg"><button onclick="r5upload('ritual')">Upload ritual</button><p>Upload ambient_gate.mp3 through the Gate room on the main audio dashboard.</p><h3>Live gate status</h3><pre id="r5status"></pre></div><script>
+async function r5api(path,opts){const r=await fetch('/api/scenes/room5'+path,opts);const d=await r.json();if(!r.ok)throw Error(d.error||r.status);return d}
+async function r5load(){try{document.getElementById('r5editor').value=JSON.stringify(await r5api(''),null,2);document.getElementById('r5msg').textContent='Loaded'}catch(e){document.getElementById('r5msg').textContent=e.message}}
+async function r5save(){try{const d=JSON.parse(document.getElementById('r5editor').value);await r5api('',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});document.getElementById('r5msg').textContent='Saved to haunt-gate';await r5load()}catch(e){document.getElementById('r5msg').textContent=e.message}}
+async function r5arm(v){try{const d=JSON.parse(document.getElementById('r5editor').value);d.enabled=v;await r5api('',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});await r5load()}catch(e){document.getElementById('r5msg').textContent=e.message}}
+async function r5stop(v){try{await r5api('/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stop:v})});await r5status()}catch(e){document.getElementById('r5msg').textContent=e.message}}
+async function r5upload(kind){try{const f=document.getElementById('r5'+kind).files[0];if(!f)throw Error('Choose MP3');const fd=new FormData();fd.append('file',f);await r5api('/audio/'+kind,{method:'POST',body:fd});document.getElementById('r5msg').textContent=kind+' audio uploaded'}catch(e){document.getElementById('r5msg').textContent=e.message}}
+async function r5status(){try{document.getElementById('r5status').textContent=JSON.stringify(await r5api('/status'),null,2)}catch(e){document.getElementById('r5status').textContent=e.message}}
+r5load();r5status();setInterval(r5status,1500);
 </script></body></html>'''
 
 @app.get('/')
@@ -355,5 +364,32 @@ def room4_status_proxy():return room4_forward('/status')
 def room4_override_proxy():return room4_forward('/override')
 @app.post('/api/scenes/room4/audio')
 def room4_audio_proxy():return room4_forward('/audio')
+
+# Room 5 Ghost Gate: authenticated scene proxy.
+def room5_forward(path):
+    try:
+        kw={'headers':{'X-Haunt-Token':TOKEN},'timeout':8}
+        if request.method=='PUT' or (request.method=='POST' and path=='/override'):
+            kw['json']=request.get_json(silent=True)
+        elif request.method=='POST' and path.startswith('/audio/'):
+            f=request.files.get('file')
+            if not f or Path(f.filename).suffix.lower()!='.mp3':return jsonify(error='Select MP3'),400
+            kw['files']={'file':(f.filename,f.stream,'audio/mpeg')}
+            kw['timeout']=40
+        r=requests.request(request.method,'http://haunt-gate.local:5058'+path,**kw)
+        return (r.content,r.status_code,{'Content-Type':'application/json','Cache-Control':'no-store'})
+    except requests.RequestException as exc:
+        return jsonify(error='Ghost Gate scene unreachable: '+type(exc).__name__),503
+
+@app.route('/api/scenes/room5',methods=['GET','PUT'])
+def room5_config_proxy():return room5_forward('/config')
+@app.get('/api/scenes/room5/status')
+def room5_status_proxy():return room5_forward('/status')
+@app.post('/api/scenes/room5/override')
+def room5_override_proxy():return room5_forward('/override')
+@app.post('/api/scenes/room5/audio/<kind>')
+def room5_audio_proxy(kind):
+    if kind not in ('instruction','ritual'):return jsonify(error='Unknown audio slot'),404
+    return room5_forward('/audio/'+kind)
 
 if __name__ == '__main__': app.run(host='0.0.0.0',port=5000)

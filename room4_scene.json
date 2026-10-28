@@ -1,0 +1,19 @@
+{
+  "enabled": false,
+  "near_cm": 30,
+  "trigger_cm": 60,
+  "release_cm": 70,
+  "cooldown_seconds": 15,
+  "button_debounce_ms": 100,
+  "sequence_duration_seconds": 38.77,
+  "actor_light_seconds": 30,
+  "exit_confirm_seconds": 2,
+  "white_off_at_seconds": 20,
+  "red_blink_at_seconds": 24,
+  "red_blink_on_seconds": 0.5,
+  "red_blink_off_seconds": 0.5,
+  "red_blink_cycles": 5,
+  "arrow_at_seconds": 27,
+  "arrow_angle": 45,
+  "journey_volume": 75
+}

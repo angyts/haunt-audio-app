@@ -1,0 +1,15 @@
+[Unit]
+Description=Gui Gui Room 4 Haunted Lift Scene
+After=network-online.target haunt-lift-button.service haunt-servo.service haunt-relay.service haunt-ultrasonic.service haunt-agent.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=haunt-lift
+WorkingDirectory=/home/haunt-lift/haunt/haunt-audio-app
+EnvironmentFile=/home/haunt-lift/haunt/haunt-audio-app/haunt.env
+ExecStart=/home/haunt-lift/haunt/haunt-audio-app/.venv/bin/python /home/haunt-lift/haunt/haunt-audio-app/room4_scene.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=8
+[Install]
+WantedBy=multi-user.target
